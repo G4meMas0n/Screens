@@ -1,0 +1,20 @@
+{
+    ["title"] = "",
+    ["pos-x"] = 1,
+    ["pos-y"] = 1,
+    ["width"] = 0,
+    ["height"] = 0,
+    ["color"] = {
+        ["active"] = {
+            ["text"] = "0",
+            ["background"] = "d"
+        },
+        ["inactive"] = {
+            ["text"] = "0",
+            ["background"] = "e"
+        }
+    },
+    ["action"] = {},
+    ["active"] = false,
+    ["visible"] = false
+}
