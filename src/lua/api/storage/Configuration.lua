@@ -15,9 +15,26 @@
 -- along with this program. If not, see <https://www.gnu.org/licenses/>.
 --
 
+--- Copies a value.
+--- @param value boolean|number|string|table the value to copy.
+--- @return boolean|number|string|table the copied value.
+local function copy(value)
+    if type(value) == "table" then
+        local result = {}
+
+        for key, content in pairs(value) do
+            result[key] = copy(content)
+        end
+
+        return result
+    end
+
+    return value
+end
+
 --- Creates a new Configuration table object.
---- @param path string the path to the storage file
---- @return table the created configuration table
+--- @param path string the path to the storage file.
+--- @return table the created configuration table.
 function create(path)
     -- Check parameter type before initializing configuration table:
     if type(path) ~= "string" then
@@ -31,23 +48,6 @@ function create(path)
     local cPath = path
     local cTable = {}
 
-    --- Copies a value
-    --- @param value boolean|number|string|table the value to copy
-    --- @return boolean|number|string|table the copied value
-    local function copy(value)
-        if type(value) == "table" then
-            local result = {}
-
-            for key, content in pairs(value) do
-                result[key] = copy(content)
-            end
-
-            return result
-        end
-
-        return value
-    end
-
     -- Object Implementation
     local Configuration = {}
 
@@ -57,8 +57,8 @@ function create(path)
     end
 
     --- Gets whether this configuration contains the specified key.
-    --- @param key string the configuration key to check
-    --- @return boolean true when this configuration contains the key, false otherwise
+    --- @param key string the configuration key to check.
+    --- @return boolean true when this configuration contains the key, false otherwise.
     function Configuration.contains(key)
         if type(key) ~= "string" then
             error("bad argument #1 (expected string, got " .. type(key) .. ")", 2)
@@ -68,9 +68,9 @@ function create(path)
     end
 
     --- Gets the value of an configuration key.
-    --- @param key string the configuration key for the value to get
-    --- @param default nil|boolean|number|string|table the default value for the configuration key
-    --- @return nil|boolean|number|string|table the value of the configuration key or the specified default value if it not exist
+    --- @param key string the configuration key for the value to get.
+    --- @param default nil|boolean|number|string|table the default value for the configuration key.
+    --- @return nil|boolean|number|string|table the value of the configuration key or the specified default value if it not exist.
     function Configuration.get(key, default)
         if type(key) ~= "string" then
             error("bad argument #1 (expected string, got " .. type(key) .. ")", 2)
@@ -86,8 +86,8 @@ function create(path)
     end
 
     --- Sets a configuration key to a specified value.
-    --- @param key string the configuration key for the value to set
-    --- @param value nil|boolean|number|string|table the value for the configuration key
+    --- @param key string the configuration key for the value to set.
+    --- @param value nil|boolean|number|string|table the value for the configuration key.
     function Configuration.set(key, value)
         if type(key) ~= "string" then
             error("bad argument #1 (expected string, got " .. type(key) .. ")", 2)
@@ -105,7 +105,7 @@ function create(path)
     end
 
     --- Gets all configuration keys of this configuration file.
-    --- @return table all configuration keys registered in this configuration
+    --- @return table all configuration keys registered in this configuration.
     function Configuration.keys()
         local keys = {}
 
@@ -119,7 +119,7 @@ function create(path)
     end
 
     --- Gets all configuration values of this configuration file.
-    --- @return table all configuration values registered in this configuration
+    --- @return table all configuration values registered in this configuration.
     function Configuration.values()
         local values = {}
 
@@ -133,13 +133,13 @@ function create(path)
     end
 
     --- Gets the path to the registered file of this configuration.
-    --- @return string the path to the configuration file
+    --- @return string the path to the configuration file.
     function Configuration.path()
         return cPath
     end
 
     --- Loads the registered file of this configuration.
-    --- @return boolean true when the file was loaded successful, false otherwise
+    --- @return boolean true when the file was loaded successful, false otherwise.
     function Configuration.load()
         local file = fs.open(cPath, "r")
 
@@ -171,7 +171,7 @@ function create(path)
     end
 
     --- Saves this configuration to the registered file.
-    --- @return boolean true when the file was saved successful, false otherwise
+    --- @return boolean true when the file was saved successful, false otherwise.
     function Configuration.save()
         local file = fs.open(cPath, "w")
 
