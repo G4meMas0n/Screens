@@ -1,0 +1,12 @@
+{
+    ["title"] = "",
+    ["offset"] = 2,
+    ["padding"] = 1,
+    ["color"] = {
+        ["text"] = "0",
+        ["background"] = "f"
+    },
+    ["visible"] = false,
+    ["cursor-x"] = 1,
+    ["cursor-y"] = 1
+}
