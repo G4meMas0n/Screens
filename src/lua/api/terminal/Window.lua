@@ -977,6 +977,34 @@ function create(terminal, x, y, width, height, title)
                 Window.setCursorPos(wConfig.get("cursor-x"), wConfig.get("cursor-y"))
             end
 
+            if wConfig.contains("lines") then
+                local lines = wConfig.get("lines")
+
+                if type(lines) ~= "table" then
+                    error("bad argument #1 (expected lines table, got " .. type(lines) .. ")", 2)
+                end
+
+                local oldX, oldY = Window.getCursorPos()
+
+                for line, content in pairs(lines) do
+                    if type(line) ~= "number" then
+                        error("bad argument #1 (expected line number, got " .. type(line) .. ")", 2)
+                    end
+
+                    Window.setCursorPos(1, line)
+
+                    if type(content) == "string" then
+                        Window.write(content)
+                    elseif type(content) == "table" then
+                        Window.blit(content.text, content.color, content.background)
+                    else
+                        error("bad argument #1 (expected content string or table, got " .. type(content) .. ")", 2)
+                    end
+                end
+
+                Window.setCursorPos(oldX, oldY)
+            end
+
             return true
         end
 
