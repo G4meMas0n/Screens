@@ -12,5 +12,7 @@
         ["background"] = "f",
         ["border"] = "7"
     },
-    ["visible"] = false
+    ["visible"] = false,
+    ["cursor-x"] = 1,
+    ["cursor-y"] = 1
 }

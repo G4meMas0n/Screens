@@ -50,7 +50,9 @@ local defaults = {
         ["background"] = "f",
         ["border"] = "7"
     },
-    ["visible"] = false
+    ["visible"] = false,
+    ["cursor-x"] = 1,
+    ["cursor-y"] = 1
 }
 
 --- Checks for two objects if there are equal.
@@ -180,17 +182,14 @@ function create(terminal, x, y, width, height, title)
     local wTerm = terminal
 
     local wColor = defaults["color"]
-
     local wPaddingX = defaults["padding-x"]
     local wPaddingY = defaults["padding-y"]
-
     local wVisible = defaults["visible"]
+    local wCursorX = defaults["cursor-x"]
+    local wCursorY = defaults["cursor-y"]
 
-    local wCursorX = 1
-    local wCursorY = 1
-
-    local wLines = {}
     local wBorder = {}
+    local wLines = {}
 
     local wConfig
 
@@ -300,7 +299,7 @@ function create(terminal, x, y, width, height, title)
 
     --- Empties lines of this window screen (without border).
     local function empty(line)
-        local length = (wHeight - 2) - (wPaddingY * 2)
+        local length = (wWidth - 2) - (wPaddingX * 2)
 
         -- Cache cleared lines before writing it in the lines cache:
         local text = string.rep(" ", length)
@@ -308,7 +307,7 @@ function create(terminal, x, y, width, height, title)
         local background = string.rep(wColor["background"], length)
 
         if line == nil then
-            for lines = 1, length do
+            for lines = 1, (wHeight - 2) - (wPaddingY * 2) do
                 wLines[lines] = {
                     ["text"] = text,
                     ["color"] = color,
@@ -616,16 +615,12 @@ function create(terminal, x, y, width, height, title)
 
         maxWidth, maxHeight = wTerm.getSize()
 
-        if new > 0 and new > maxWidth - (wPosX - 1) then
+        if new < 0 or new > maxWidth - (wPosX - 1) then
             error("bad argument #1 (expected width between 0 and " .. (maxWidth - (wPosX - 1)) .. ", got " .. new .. ")", 2)
         end
 
         if new > 0 and string.len(wTitle) > 0 and new < string.len(wTitle) + (wOffset * 2) then
             error("bad argument #1 (expected width between " .. (string.len(wTitle) + (wOffset * 2)) .. " and " .. (maxWidth - (wPosX - 1)) .. ", got " .. new .. ")", 2)
-        end
-
-        if new < 0 then
-            new = 0
         end
 
         if new ~= wWidth then
@@ -658,12 +653,8 @@ function create(terminal, x, y, width, height, title)
 
         maxWidth, maxHeight = wTerm.getSize()
 
-        if new > 0 and new > maxHeight - (wPosY - 1) then
+        if new < 0 or new > maxHeight - (wPosY - 1) then
             error("bad argument #1 (expected height between 0 and " .. (maxHeight - (wPosX - 1)) .. ", got " .. new .. ")", 2)
-        end
-
-        if new < 0 then
-            new = 0
         end
 
         if new ~= wHeight then
@@ -874,6 +865,41 @@ function create(terminal, x, y, width, height, title)
         return true
     end
 
+    --- Gets the current cursor position of this window.
+    --- @return number, number the current position of the cursor.
+    function Window.getCursorPos()
+        return wCursorX, wCursorY
+    end
+
+    --- Sets the cursor position of this window.
+    --- @param newX nil|number the new x position for the cursor or nil.
+    --- @param newY nil|number the new y position for the cursor or nil.
+    function Window.setCursorPos(newX, newY)
+        if newX ~= nil and type(newX) ~= "number" then
+            error("bad argument #1 (expected number, got " .. type(newX) .. ")", 2)
+        end
+
+        if newY ~= nil and type(newY) ~= "number" then
+            error("bad argument #2 (expected number, got " .. type(newY) .. ")", 2)
+        end
+
+        if newX ~= nil then
+            newX = math.floor(newX)
+
+            if newX ~= wCursorX then
+                wCursorX = newX
+            end
+        end
+
+        if newY ~= nil then
+            newY = math.floor(newY)
+
+            if newY ~= wCursorY then
+                wCursorY = newY
+            end
+        end
+    end
+
     --- Loads this window from the configuration file at the specified path.
     --- @param path string the path to the configuration file.
     --- @return boolean true when the configuration was loaded, false otherwise.
@@ -947,6 +973,10 @@ function create(terminal, x, y, width, height, title)
                 Window.setVisible(wConfig.get("visible"))
             end
 
+            if wConfig.contains("cursor-x") or wConfig.contains("cursor-y") then
+                Window.setCursorPos(wConfig.get("cursor-x"), wConfig.get("cursor-y"))
+            end
+
             return true
         end
 
@@ -1007,39 +1037,17 @@ function create(terminal, x, y, width, height, title)
             if not equal(wVisible, defaults["visible"]) then
                 wConfig.set("visible", wVisible)
             end
+
+            if not equal(wCursorX, defaults["cursor-x"]) then
+                wConfig.set("cursor-x", wCursorX)
+            end
+
+            if not equal(wCursorY, defaults["cursor-y"]) then
+                wConfig.set("cursor-x", wCursorY)
+            end
         end
 
         return wConfig.save()
-    end
-
-    --- Gets the current cursor position of this window.
-    --- @return number, number the current position of the cursor.
-    function Window.getCursorPos()
-        return wCursorX, wCursorY
-    end
-
-    --- Sets the cursor position of this window.
-    --- @param newX number the new x position for the cursor.
-    --- @param newY number the new y position for the cursor.
-    function Window.setCursorPos(newX, newY)
-        if type(newX) ~= "number" then
-            error("bad argument #1 (expected number, got " .. type(newX) .. ")", 2)
-        end
-
-        if type(newY) ~= "number" then
-            error("bad argument #2 (expected number, got " .. type(newY) .. ")", 2)
-        end
-
-        newX = math.floor(newX)
-        newY = math.floor(newY)
-
-        if newX ~= wCursorX then
-            wCursorX = newX
-        end
-
-        if newY ~= wCursorY then
-            wCursorY = newY
-        end
     end
 
     --- Gets whether this window is colored.
@@ -1102,11 +1110,11 @@ function create(terminal, x, y, width, height, title)
         end
 
         if type(color) ~= "string" then
-            error("bad argument #1 (expected string, got " .. type(color) .. ")", 2)
+            error("bad argument #2 (expected string, got " .. type(color) .. ")", 2)
         end
 
         if type(background) ~= "string" then
-            error("bad argument #1 (expected string, got " .. type(background) .. ")", 2)
+            error("bad argument #3 (expected string, got " .. type(background) .. ")", 2)
         end
 
         if string.len(text) ~= string.len(color) or string.len(color) ~= string.len(background) then
