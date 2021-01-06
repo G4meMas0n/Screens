@@ -15,11 +15,11 @@
 -- along with this program. If not, see <https://www.gnu.org/licenses/>.
 --
 
---                       --
---   JSON Util Section   --
---                       --
+--                           --
+--   JSON Decoding Section   --
+--                           --
 
---- Allowed escape characters for strings.
+--- Table of all allowed escape characters in json strings.
 local escapes = {
     ["\n"] = "\\n",
     ["\r"] = "\\r",
@@ -30,34 +30,205 @@ local escapes = {
     ["\\"] = "\\\\"
 }
 
---- Allowed characters for numbers.
+--- Table of all allowed number characters in json strings.
 local numbers = {
     ['e'] = true,
     ['E'] = true,
-    ['+'] = true,
-    ['-'] = true,
     ['.'] = true
 }
 
---- Allowed formatting characters for json strings.
-local removal = {
+--- Table of all allowed space characters in json strings.
+local spaces = {
     ['\n'] = true,
     ['\r'] = true,
     ['\t'] = true,
-    [' '] = true,
-    [','] = true
+    [' '] = true
 }
 
---- Removes all characters at the beginning of the given string until a non formatting characters comes.
---- @param input string the input string to trim.
+--- Removes all whitespace characters at the beginning.
+--- @param sequence string the input string to trim.
 --- @return string the trimmed string.
-local function remove(input)
-    while removal[input:sub(1, 1)] do
-        input = input:sub(2)
+local function remove(sequence)
+    while spaces[sequence:sub(1, 1)] do
+        sequence = sequence:sub(2)
     end
 
-    return input
+    return sequence
 end
+
+--- Checks whether the next sequence character is the required char.
+--- @param sequence string the input string to check.
+--- @param char string the required char for the next sequence character.
+--- @return string the rest of the sequence without the required char.
+local function require(sequence, char)
+    if sequence:sub(1, 1) ~= char then
+        error("expected character '" .. char .. "', got '" .. sequence:sub(1, 1) .. "'", 2)
+    end
+
+    return remove(sequence:sub(2))
+end
+
+--- Decodes the complete input string into an json object.
+--- @param input string the json string to decode.
+--- @return table|string|number|nil|boolean, string the parsed json value and the rest of the input.
+local function decodeValue(input)
+
+    --- Decodes the next sequence of the input string into a number.
+    --- @param sequence string the string to parse.
+    --- @return number the parsed number value and the rest of the sequence.
+    local function decodeNumber(sequence)
+        local range = 1
+
+        if sequence:sub(1, 1) == "-" then
+            range = range + 1
+        end
+
+        while tonumber(sequence:sub(range, range)) or numbers[sequence:sub(range, range)] do
+            range = range + 1
+        end
+
+        local number = tonumber(sequence:sub(1, range - 1))
+
+        if number == nil then
+            error("expected valid number, got '" .. sequence:sub(1, range - 1) .. "'")
+        end
+
+        return number, remove(sequence:sub(range))
+    end
+
+    --- Decodes the next sequence of the input string into a string.
+    --- @param sequence string the string to decode.
+    --- @return string, string the parsed string and the rest of the sequence.
+    local function decodeString(sequence)
+        sequence = require(sequence, "\"")
+
+        local content = ""
+        local next, escape
+
+        while sequence:sub(1, 1) ~= "\"" do
+            next = sequence:sub(1, 1)
+            sequence = sequence:sub(2)
+
+            if next == "\n" or next == "\r" then
+                error("expected character '\"', got '" .. escapes[next] .. "'")
+            end
+
+            if next == "\\" then
+                escape = sequence:sub(1, 1)
+                sequence = sequence:sub(2)
+
+                if escapes[next .. escape] == nil then
+                    error("expected escape character, got '" .. escape .. "'")
+                end
+
+                next = escapes[next .. escape]
+            end
+
+            content = content .. next
+        end
+
+        return content, remove(sequence:sub(2))
+    end
+
+    --- Decodes the next sequence of the input string into an json array.
+    --- @param sequence string the string to decode.
+    --- @return table the parsed json array, with numbers as keys and the rest of the sequence.
+    local function decodeArray(sequence)
+        sequence = require(sequence, "[")
+
+        local array = {}
+        local value
+
+        while sequence:sub(1, 1) ~= "]" do
+            value, sequence = decodeValue(sequence)
+            array[#array + 1] = value
+
+            if sequence:sub(1, 1) ~= "]" then
+                sequence = require(sequence, ",")
+            end
+        end
+
+        return array, remove(sequence:sub(2))
+    end
+
+    --- Decodes the next sequence of the input string into an json object.
+    --- @param sequence string the string to decode.
+    --- @return table the parsed json object, with strings as keys and the rest of the sequence.
+    local function decodeObject(sequence)
+        sequence = require(sequence, "{")
+
+        local object = {}
+        local key, value
+
+        while sequence:sub(1, 1) ~= "}" do
+            key, sequence = decodeString(sequence)
+
+            if object[key] ~= nil then
+                error("expected unique keys, got key '" .. key .. "' twice")
+            end
+
+            value, sequence = decodeValue(require(sequence, ":"))
+            object[key] = value
+
+            if sequence:sub(1, 1) ~= "}" then
+                sequence = require(sequence, ",")
+            end
+        end
+
+        return object, remove(sequence:sub(2))
+    end
+
+    if input:sub(1, 1) == "{" then
+        return decodeObject(input)
+    end
+
+    if input:sub(1, 1) == "[" then
+        return decodeArray(input)
+    end
+
+    if input:sub(1, 1) == "\"" then
+        return decodeString(input)
+    end
+
+    if input:sub(1, 1) == "-" or tonumber(input:sub(1, 1)) ~= nil then
+        return decodeNumber(input)
+    end
+
+    if input:sub(1, 4) == "null" then
+        return nil, remove(input:sub(5))
+    end
+
+    if input:sub(1, 4) == "true" then
+        return true, remove(input:sub(5))
+    end
+
+    if input:sub(1, 5) == "false" then
+        return false, remove(input:sub(6))
+    end
+
+    error("unexpected character '" .. input:sub(1, 1) .. "'")
+end
+
+--- Decodes the given string into a json object.
+--- @param input string the json string to decode.
+--- @return table|string|number|boolean the resulting json object.
+function decode(input)
+    if type(input) ~= "string" then
+        error("bad argument #1 (expected string, got " .. type(input) .. ")", 2)
+    end
+
+    local success, result = pcall(decodeValue, remove(input))
+
+    if not success then
+        error("bad argument #1 (invalid json string: " .. result .. ")", 2)
+    end
+
+    return result
+end
+
+--                           --
+--   JSON Encoding Section   --
+--                           --
 
 --- Returns the size of the given table.
 --- @param object table the table the get the size.
@@ -88,7 +259,7 @@ local function isArray(array)
         end
     end
 
-    return max == size(array)
+    return max == #array
 end
 
 --- Checks whether the given table represents an json object.
@@ -104,192 +275,11 @@ local function isObject(object)
     return true
 end
 
---                           --
---   JSON Decoding Section   --
---                           --
-
---- Decodes the complete input string into an json object.
---- @param input string the json string to decode.
---- @return table|string|number|nil|boolean, string the parsed json value and the rest of the input.
-local function decodeValue(input)
-
-    --- Decodes the next sequence of the input string into a boolean.
-    --- @param sequence string the string to decode.
-    --- @return boolean the parsed boolean value and the rest of the input.
-    local function decodeBoolean(sequence)
-        if sequence:sub(1, 4) == "true" then
-            return true, remove(sequence:sub(5))
-        end
-
-        if sequence:sub(1, 5) == "false" then
-            return false, remove(sequence:sub(6))
-        end
-    end
-
-    --- Decodes the next sequence of the input string into nil value.
-    --- @param sequence string the string to decode.
-    --- @return nil the parsed nil value and the rest of the input.
-    local function decodeNull(sequence)
-        if sequence:sub(1, 3) == "nil" then
-            return nil, remove(sequence:sub(4))
-        end
-
-        if sequence:sub(1, 4) == "null" then
-            return nil, remove(sequence:sub(5))
-        end
-    end
-
-    --- Decodes the next sequence of the input string into a number.
-    --- @param sequence string the string to parse.
-    --- @return number the parsed number value and the rest of the input.
-    local function decodeNumber(sequence)
-        local range = 1
-
-        while tonumber(sequence:sub(range, range)) or numbers[sequence:sub(range, range)] do
-            range = range + 1
-        end
-
-        return tonumber(sequence:sub(1, range - 1)), remove(sequence:sub(range))
-    end
-
-    --- Decodes the next sequence of the input string into a string.
-    --- @param sequence string the string to decode.
-    --- @return string the parsed string and the rest of the input.
-    local function decodeString(sequence)
-        if sequence:sub(1, 1) ~= "\"" then
-            error("invalid json string #3 (expected beginning quotation mark, got " .. sequence:sub(1, 1) .. ")", 2)
-        end
-
-        sequence = sequence:sub(2)
-
-        local content = ""
-
-        while sequence:sub(1, 1) ~= "\"" do
-            local next = sequence:sub(1, 1)
-            sequence = sequence:sub(2)
-
-            if next == "\n" or next == "\r" then
-                error("invalid json string #3 (expected closing quotation mark, got " .. escapes[next] .. ")", 2)
-            end
-
-            if next == "\\" then
-                local escape = sequence:sub(1, 1)
-                sequence = sequence:sub(2)
-
-                if escapes[next .. escape] == nil then
-                    error("invalid json string #3 (expected escape character, got " .. escape .. ")", 2)
-                end
-
-                next = escapes[next .. escape]
-            end
-
-            content = content .. next
-        end
-
-        return content, remove(sequence:sub(2))
-    end
-
-    --- Decodes the next sequence of the input string into an json array.
-    --- @param sequence string the string to decode.
-    --- @return table the parsed json array, with numbers as keys and the rest of the input.
-    local function decodeArray(sequence)
-        if sequence:sub(1, 1) ~= "[" then
-            error("invalid json string #2 (expected beginning square bracket, got " .. sequence:sub(1, 1) .. ")", 2)
-        end
-
-        sequence = remove(sequence:sub(2))
-
-        local array = {}
-        local value
-
-        while sequence:sub(1, 1) ~= "]" do
-            value, sequence = decodeValue(sequence)
-            array[#array + 1] = value
-        end
-
-        return array, remove(sequence:sub(2))
-    end
-
-    --- Decodes the next sequence of the input string into an json object.
-    --- @param sequence string the string to decode.
-    --- @return table the parsed json object, with strings as keys and the rest of the input.
-    local function decodeObject(sequence)
-        if sequence:sub(1, 1) ~= "{" then
-            error("invalid json string #1 (expected beginning curly bracket, got " .. sequence:sub(1, 1) .. ")", 2)
-        end
-
-        sequence = remove(sequence:sub(2))
-
-        local object = {}
-        local key, value
-
-        while sequence:sub(1, 1) ~= "}" do
-            key, sequence = decodeString(sequence)
-
-            if object[key] ~= nil then
-                error("invalid json string #2 (expected unique object keys, got " .. key .. " twice)", 2)
-            end
-
-            if sequence:sub(1, 1) ~= ":" then
-                error("invalid json string #2 (expected key value separator, got " .. sequence:sub(1, 1) .. ")", 2)
-            end
-
-            value, sequence = decodeValue(remove(sequence:sub(2)))
-            object[key] = value
-        end
-
-        return object, remove(sequence:sub(2))
-    end
-
-    if input:sub(1, 1) == "{" then
-        return decodeObject(input)
-    end
-
-    if input:sub(1, 1) == "[" then
-        return decodeArray(input)
-    end
-
-    if input:sub(1, 1) == "\"" then
-        return decodeString(input)
-    end
-
-    if tonumber(input:sub(1,1)) ~= nil or numbers[input:sub(1,1)] then
-        return decodeNumber(input)
-    end
-
-    if input:sub(1, 3) == "nil" or input:sub(1, 4) == "null" then
-        return decodeNull(input)
-    end
-
-    if input:sub(1, 4) == "true" or input:sub(1, 5) == "false" then
-        return decodeBoolean(input)
-    end
-
-    error("invalid json string #1 (expected json value, got " .. input:sub(1, input:find("[\n\r\t ,}%]]")) .. ")", 2)
-end
-
---- Decodes the given string into a json object.
---- @param input string the json string to decode.
---- @return table the resulting json object.
-function decode(input)
-    if type(input) ~= "string" then
-        error("bad argument #1 (expected string, got " .. type(input) .. ")", 2)
-    end
-
-    if input:sub(1, 1) ~= "{" and input:sub(1, 1) ~= "[" then
-        error("bad argument #1 (expected json array or json object)", 2)
-    end
-
-    return decodeValue(remove(input))
-end
-
---                           --
---   JSON Encoding Section   --
---                           --
-
 --- Encodes the complete json object into a json string.
 --- @param object table|string|number|boolean the json object to encode.
---- @return string the parsed json string
+--- @param level number the current tab level for string.
+--- @param seen table the list of all seen tables.
+--- @return string the resulting json string of the given json object.
 local function encodeValue(object, level, seen)
 
     --- Encodes the text into a json string.
@@ -322,11 +312,10 @@ local function encodeValue(object, level, seen)
     --- @return string the encoded json object.
     local function encodeObject(other)
         local output = "{\n" .. string.rep("\t",level + 1)
-        local last = size(other)
-        local index = 0
+        local index, last = 0, size(other)
 
         for key, value in pairs(other) do
-            output = output .. encodeString(key) .. ": " .. encodeValue(value, level + 1, seen)
+            output = output .. encodeString(key) .. ":" .. encodeValue(value, level + 1, seen)
             index = index + 1
 
             if index < last then
@@ -339,7 +328,7 @@ local function encodeValue(object, level, seen)
 
     if type(object) == "table" then
         if seen[object] ~= nil then
-            error("invalid json object #2 (expected cycle-less table)", 2)
+            error("expected cycle-less table")
         end
 
         seen[object] = true
@@ -352,7 +341,7 @@ local function encodeValue(object, level, seen)
             return encodeObject(object)
         end
 
-        error("invalid json object #2 (expected json array or object)", 2)
+        error("expected json array or object")
     end
 
     if type(object) == "string" then
@@ -363,7 +352,7 @@ local function encodeValue(object, level, seen)
         return tostring(object)
     end
 
-    error("invalid json object #1 (expected supported json values, got " .. type(object) .. ")", 2)
+    error("expected json value, got '" .. type(object) .. "'")
 end
 
 --- Encodes the given json object into a string.
@@ -374,5 +363,11 @@ function encode(object)
         error("bad argument #1 (expected table, got " .. type(object) .. ")", 2)
     end
 
-    return encodeValue(object, 0, {})
+    local success, result = pcall(encodeValue, object, 0, {})
+
+    if not success then
+        error("bad argument #1 (invalid json object: " .. result .. ")", 2)
+    end
+
+    return result
 end
