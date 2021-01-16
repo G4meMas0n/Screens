@@ -370,7 +370,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
         end
 
         if title:len() > 0 and title:len() > tWidth - (tPadding * 2) - (tOffset * 2) then
-            error("bad argument #1 (expected title length between 0 and " .. tWidth - (tPadding * 2) - (tOffset * 2) .. ", got " .. title:len() .. ")", 2)
+            error("bad argument #1 (expected length between 0 and " .. tWidth - (tPadding * 2) - (tOffset * 2) .. ", got " .. title:len() .. ")", 2)
         end
 
         if title ~= tTitle then
@@ -413,6 +413,16 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
         end
 
         return false
+    end
+
+    --- Gets the position, without header, of this terminal.
+    --- @return number, number the terminal's x and y position without header.
+    function terminal.getPosition()
+        if tTitle:len() > 0 then
+            return tPosX + tPadding, tPosY + tPadding + (tOffset * 2) + 1
+        else
+            return tPosX + tPadding, tPosY + tPadding
+        end
     end
 
     --- Gets the x position of this terminal.
@@ -716,12 +726,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     --- @param path string the path to the configuration file.
     --- @return boolean true when the configuration was loaded, false otherwise.
     function terminal.load(path)
-        if path ~= nil and type(path) ~= "string" then
+        if path ~= nil and type(path) ~= "string" or path == nil and tConfig == nil then
             error("bad argument #1 (expected string, got " .. type(path) .. ")", 2)
-        end
-
-        if path == nil and tConfig == nil then
-            error("bad argument #1 (expected path, got nil)", 2)
         end
 
         if path ~= nil and (tConfig == nil or tConfig.path() ~= path) then
@@ -751,12 +757,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     --- @param path string the path to the configuration file.
     --- @return boolean true when the configuration was saved, false otherwise.
     function terminal.save(path)
-        if path ~= nil and type(path) ~= "string" then
+        if path ~= nil and type(path) ~= "string" or path == nil and tConfig == nil then
             error("bad argument #1 (expected string, got " .. type(path) .. ")", 2)
-        end
-
-        if path == nil and tConfig == nil then
-            error("bad argument #1 (expected path, got nil)", 2)
         end
 
         if path ~= nil and (tConfig == nil or tConfig.path() ~= path) then
