@@ -197,20 +197,20 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         return bTitle
     end
 
-    --- Sets the name of this button.
-    --- @param new string the new name for this button.
+    --- Sets the title of this button.
+    --- @param title string the new title for this button.
     --- @return boolean true when the title was changed, false otherwise.
-    function button.setTitle(new)
-        if type(new) ~= "string" then
-            error("bad argument #1 (expected string, got " .. type(new) .. ")", 2)
+    function button.setTitle(title)
+        if type(title) ~= "string" then
+            error("bad argument #1 (expected string, got " .. type(title) .. ")", 2)
         end
 
-        if new:len() > bWidth then
-            error("bad argument #1 (expected length between 0 and " .. bWidth .. ", got " .. new:len() .. ")", 2)
+        if title:len() > bWidth then
+            error("bad argument #1 (expected length between 0 and " .. bWidth .. ", got " .. title:len() .. ")", 2)
         end
 
-        if new ~= bTitle then
-            bTitle = save("title", new)
+        if title ~= bTitle then
+            bTitle = save("title", title)
             draw(math.ceil(bHeight / 2))
 
             return true
@@ -236,7 +236,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
     --- @return boolean true when the x position was changed, false otherwise.
     function button.setPosX(posX)
         if type(posX) ~= "number" then
-            error("bad argument #1 (expected number, got " .. type(position) .. ")", 2)
+            error("bad argument #1 (expected number, got " .. type(posX) .. ")", 2)
         end
 
         local maxWidth, _ = bTerm.getSize()
@@ -309,11 +309,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
 
         local maxWidth, _ = bTerm.getSize()
 
-        if width < 0 or width > maxWidth - (bPosX - 1) then
-            error("bad argument #1 (expected width between 0 and " .. (maxWidth - (bPosX - 1)) .. ", got " .. width .. ")", 2)
-        end
-
-        if bTitle:len() > 0 and width < bTitle:len() then
+        if width < bTitle:len() or width > maxWidth - (bPosX - 1) then
             error("bad argument #1 (expected width between " .. bTitle:len() .. " and " .. (maxWidth - (bPosX - 1)) .. ", got " .. width .. ")", 2)
         end
 
@@ -620,7 +616,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         return false
     end
 
-    --- Draws the button to the button.
+    --- Draws the button to the terminal.
     function button.redraw()
         clear()
         draw()
@@ -634,4 +630,6 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
             button.setActive(true)
         end
     end
+
+    return button
 end

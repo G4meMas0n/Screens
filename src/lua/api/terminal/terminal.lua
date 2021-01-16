@@ -113,7 +113,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
         end
     end
 
-    local cText, cBackground = "0", "f"
+    local cText, cBackground = hex[bTerm.getTextColor()], hex[bTerm.getBackgroundColor()]
     local tCursorX, tCursorY = 1, 1
     local tVisible = false
     local tHeader = {}
