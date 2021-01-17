@@ -378,7 +378,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= caText then
-            caText = save("color-active-text", hex[color])
+            caText = save("color.text-active", hex[color])
             draw()
 
             return true
@@ -410,7 +410,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= caBackground then
-            caBackground = save("color-active-background", hex[color])
+            caBackground = save("color.background-active", hex[color])
             draw()
 
             return true
@@ -442,7 +442,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= ciText then
-            ciText = save("color-inactive-text", hex[color])
+            ciText = save("color.text-inactive", hex[color])
             draw()
 
             return true
@@ -474,7 +474,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= ciBackground then
-            ciBackground = save("color-inactive-background", hex[color])
+            ciBackground = save("color.background-inactive", hex[color])
             draw()
 
             return true
@@ -554,10 +554,10 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
             load("width", button.setWidth)
             load("height", button.setHeight)
             load("title", button.setTitle)
-            load("color-active-text", button.setActiveTextColor)
-            load("color-active-background", button.setActiveBackgroundColor)
-            load("color-inactive-text", button.setInactiveTextColor)
-            load("color-inactive-background", button.setInactiveBackgroundColor)
+            load("color.text-active", button.setActiveTextColor)
+            load("color.text-inactive", button.setInactiveTextColor)
+            load("color.background-active", button.setActiveBackgroundColor)
+            load("color.background-inactive", button.setInactiveBackgroundColor)
             load("active", button.setActive)
             load("visible", button.setVisible)
 
@@ -583,10 +583,10 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
             save("pos-y", bPosY)
             save("width", bWidth)
             save("height", bHeight)
-            save("color-active-text", caText)
-            save("color-active-background", caBackground)
-            save("color-inactive-text", ciText)
-            save("color-inactive-background", ciBackground)
+            save("color.text-active", caText)
+            save("color.text-inactive", ciText)
+            save("color.background-active", caBackground)
+            save("color.background-inactive", ciBackground)
             save("active", bActive)
             save("visible", bVisible)
         end

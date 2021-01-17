@@ -336,7 +336,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
 
         if hex[color] ~= cText then
-            cText = save("color-text", hex[color])
+            cText = save("color.text", hex[color])
             draw()
 
             return true
@@ -368,7 +368,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
 
         if hex[color] ~= cBackground then
-            cBackground = save("color-background", hex[color])
+            cBackground = save("color.background", hex[color])
             draw()
 
             return true
@@ -424,8 +424,8 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
             load("width", label.setWidth)
             load("title", label.setTitle)
             load("text", label.setText)
-            load("color-text", label.setTextColor)
-            load("color-background", label.setBackgroundColor)
+            load("color.text", label.setTextColor)
+            load("color.background", label.setBackgroundColor)
             load("visible", label.setVisible)
 
             return true
@@ -450,8 +450,8 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
             save("pos-y", lPosY)
             save("width", lWidth)
             save("text", lText)
-            save("color-text", cText)
-            save("color-background", cBackground)
+            save("color.text", cText)
+            save("color.background", cBackground)
             save("visible", lVisible)
         end
 
