@@ -39,14 +39,12 @@ local hex = {
 --- @param lPosX nil|number the label's x position.
 --- @param lPosY nil|number the label's y position.
 --- @param lWidth nil|number the label's width.
---- @param lTitle nil|string the label's title.
+--- @param lText nil|string the label's title.
 --- @return table the created label table.
-function create(lTerm, lPosX, lPosY, lWidth, lTitle)
+function create(lTerm, lPosX, lPosY, lWidth, lText)
     if type(lTerm) ~= "table" then
         error("bad argument #1 (expected table, got " .. type(lTerm) .. ")", 2)
     end
-
-    local lText = ""
 
     do
         local maxWidth, maxHeight = lTerm.getSize()
@@ -87,22 +85,22 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
             lWidth = maxWidth - (lPosX - 1)
         end
 
-        if lTitle ~= nil then
-            if type(lTitle) ~= "string" then
-                error("bad argument #5 (expected string, got " .. type(lTitle) .. ")", 2)
+        if lText ~= nil then
+            if type(lText) ~= "string" then
+                error("bad argument #5 (expected string, got " .. type(lText) .. ")", 2)
             end
 
-            if lTitle:len() > lWidth - 1 - lText:len() then
-                error("bad argument #5 (expected title length between 0 and " .. lWidth - 1 - lText:len() .. ", got " .. lTitle:len() .. ")", 2)
+            if lText:len() > lWidth then
+                error("bad argument #5 (expected length between 0 and " .. lWidth .. ", got " .. lText:len() .. ")", 2)
             end
         else
-            lTitle = ""
+            lText = ""
         end
     end
 
     local cText, cBackground = hex[lTerm.getTextColor()], hex[lTerm.getBackgroundColor()]
-    local lVisible = false
-    local lConfig
+    local lAlign, lVisible = "right", false
+    local lAction, lConfig
 
     local function clear()
         local oldX, oldY = lTerm.getCursorPos()
@@ -115,10 +113,16 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
     local function draw()
         if lVisible then
             local oldX, oldY = lTerm.getCursorPos()
-            local text = string.rep(" ", lWidth - lText:len()) .. lText
+            local text = lText
 
-            if lTitle:len() > 0 then
-                text = lTitle .. ":" .. text:sub(lTitle:len() + 1)
+            if lAlign == "center" then
+                local spacing = (lWidth - text:len()) / 2
+
+                text = string.rep(" ", math.ceil(spacing)) .. text .. string.rep(" ", math.floor(spacing))
+            elseif lAlign == "left" then
+                text = text .. string.rep(" ", lWidth - text:len())
+            elseif lAlign == "right" then
+                text = string.rep(" ", lWidth - text:len()) .. text
             end
 
             lTerm.setCursorPos(lPosX, lPosY)
@@ -127,7 +131,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
     end
 
-    local function load(key, method)
+    local function loadKey(key, method)
         if lConfig ~= nil and lConfig.contains(key) then
             local success, message = pcall(method, lConfig.get(key))
 
@@ -137,7 +141,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
     end
 
-    local function save(key, value)
+    local function saveKey(key, value)
         if lConfig ~= nil and lConfig.get(key) ~= value then
             lConfig.set(key, value)
             lConfig.save()
@@ -152,36 +156,8 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
 
     local label = {}
 
-    --- Gets the title of this label.
-    --- @return string the title of this label or an empty string.
-    function label.getTitle()
-        return lTitle
-    end
-
-    --- Sets the title of this label.
-    --- @param title string the new title for this label.
-    --- @return boolean true when the title was changed, false otherwise.
-    function label.setTitle(title)
-        if type(title) ~= "string" then
-            error("bad argument #1 (expected string, got " .. type(title) .. ")", 2)
-        end
-
-        if title:len() > lWidth - 1 - lText:len() then
-            error("bad argument #1 (expected length between 0 and " .. lWidth - 1 - lText:len() .. ", got " .. title:len() .. ")", 2)
-        end
-
-        if title ~= lTitle then
-            lTitle = save("title", title)
-            draw()
-
-            return true
-        end
-
-        return false
-    end
-
     --- Gets the text of this label.
-    --- @return string the text of this label or an empty string.
+    --- @return string the label's text or an empty string.
     function label.getText()
         return lText
     end
@@ -189,17 +165,17 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
     --- Sets the text of this label.
     --- @param text string the new text for this label.
     --- @return boolean true when the text was changed, false otherwise.
-    function label.setTitle(text)
+    function label.setText(text)
         if type(text) ~= "string" then
             error("bad argument #1 (expected string, got " .. type(text) .. ")", 2)
         end
 
-        if text:len() > lWidth - 1 - lTitle:len() then
-            error("bad argument #1 (expected length between 0 and " .. lWidth - 1 - lTitle:len() .. ", got " .. text:len() .. ")", 2)
+        if text:len() > lWidth then
+            error("bad argument #1 (expected length between 0 and " .. lWidth .. ", got " .. text:len() .. ")", 2)
         end
 
         if text ~= lText then
-            lText = save("text", text)
+            lText = saveKey("text", text)
             draw()
 
             return true
@@ -236,7 +212,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
 
         if posX ~= lPosX then
             clear()
-            lPosX = save("pos-x", posX)
+            lPosX = saveKey("pos-x", posX)
             draw()
 
             return true
@@ -267,7 +243,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
 
         if posY ~= lPosY then
             clear()
-            lPosY = save("pos-y", posY)
+            lPosY = saveKey("pos-y", posY)
             draw()
 
             return true
@@ -298,13 +274,13 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
 
         local maxWidth, _ = lTerm.getSize()
 
-        if width < lTitle:len() + lText:len() + 1 or width > maxWidth - (lPosX - 1) then
-            error("bad argument #1 (expected width between " .. lTitle:len() + lText:len() + 1 .. " and " .. (maxWidth - (lPosX - 1)) .. ", got " .. width .. ")", 2)
+        if width < lText:len() or width > maxWidth - (lPosX - 1) then
+            error("bad argument #1 (expected width between " .. lText:len() .. " and " .. (maxWidth - (lPosX - 1)) .. ", got " .. width .. ")", 2)
         end
 
         if width ~= lWidth then
             clear()
-            lWidth = save("width", width)
+            lWidth = saveKey("width", width)
             draw()
 
             return true
@@ -336,7 +312,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
 
         if hex[color] ~= cText then
-            cText = save("color.text", hex[color])
+            cText = saveKey("color.text", hex[color])
             draw()
 
             return true
@@ -368,8 +344,67 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
 
         if hex[color] ~= cBackground then
-            cBackground = save("color.background", hex[color])
+            cBackground = saveKey("color.background", hex[color])
             draw()
+
+            return true
+        end
+
+        return false
+    end
+
+    --- Gets the alignment of this label.
+    --- @return string 'left', 'center' or 'right' depending on the alignment.
+    function label.getAlign()
+        return lAlign
+    end
+
+    --- Sets the alignment of this label.
+    --- @param align string 'left', 'center', 'right' depending on the new alignment.
+    --- @return boolean true when the alignment was changed, false otherwise
+    function label.setAlign(align)
+        if type(align) ~= "string" then
+            error("bad argument #1 (expected string, got " .. type(align) .. ")", 2)
+        end
+
+        if align ~= "left" and align ~= "center" and align ~= "right" then
+            error("bad argument #1 (expected 'left', 'center' or 'right', got '" .. align .. "')", 2)
+        end
+
+        if align ~= lAlign then
+            lAlign = saveKey("align", align)
+            draw()
+
+            return true
+        end
+
+        return false
+    end
+
+    --- Gets the update action of this label.
+    --- @return function the action function.
+    function label.getAction()
+        return lAction
+    end
+
+    --- Sets the update action of this label.
+    --- @param action function|string the new action.
+    --- @return function true when the action was changed, false otherwise.
+    function label.setAction(action)
+        if type(action) ~= "function" and type(action) ~= "string" then
+            error("bad argument #1 (expected function or string, got " .. type(action) .. ")", 2)
+        end
+
+        if type(action) == "string" then
+            local func, message = load(action, "action", "t")
+
+            if not func then
+                error("bad argument #1 (" .. message .. ")", 2)
+            end
+        end
+
+        if action ~= lAction then
+            lAction = action
 
             return true
         end
@@ -392,7 +427,7 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
 
         if visible ~= lVisible then
-            lVisible = save("visible", visible)
+            lVisible = saveKey("visible", visible)
 
             if visible then
                 draw()
@@ -419,14 +454,15 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         end
 
         if lConfig.load() then
-            load("pos-x", label.setPosX)
-            load("pos-y", label.setPosY)
-            load("width", label.setWidth)
-            load("title", label.setTitle)
-            load("text", label.setText)
-            load("color.text", label.setTextColor)
-            load("color.background", label.setBackgroundColor)
-            load("visible", label.setVisible)
+            loadKey("pos-x", label.setPosX)
+            loadKey("pos-y", label.setPosY)
+            loadKey("width", label.setWidth)
+            loadKey("text", label.setText)
+            loadKey("color.text", label.setTextColor)
+            loadKey("color.background", label.setBackgroundColor)
+            loadKey("align", label.setAlign)
+            loadKey("action", label.setAction)
+            loadKey("visible", label.setVisible)
 
             return true
         end
@@ -445,14 +481,14 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
         if path ~= nil and (lConfig == nil or lConfig.path() ~= path) then
             lConfig = config.create(path)
 
-            save("title", lTitle)
-            save("pos-x", lPosX)
-            save("pos-y", lPosY)
-            save("width", lWidth)
-            save("text", lText)
-            save("color.text", cText)
-            save("color.background", cBackground)
-            save("visible", lVisible)
+            saveKey("pos-x", lPosX)
+            saveKey("pos-y", lPosY)
+            saveKey("width", lWidth)
+            saveKey("text", lText)
+            saveKey("color.text", cText)
+            saveKey("color.background", cBackground)
+            saveKey("align", lAlign)
+            saveKey("visible", lVisible)
         end
 
         return lConfig.save()
@@ -462,6 +498,30 @@ function create(lTerm, lPosX, lPosY, lWidth, lTitle)
     function label.redraw()
         clear()
         draw()
+    end
+
+    --- Updates the text of this label.
+    function label.update()
+        local function set(method, value)
+            local success, message = pcall(method, value)
+
+            if not success then
+                error("bad action #return (" .. message:gsub(".*%((.+)%)", "%1") .. ")", 4)
+            end
+        end
+
+        if lAction ~= nil then
+            local success, text, color, background = pcall(lAction, lWidth)
+
+            if not success then
+                error("bad action #run (" .. text .. ")", 3)
+            end
+
+            set(label.setText, text)
+            set(label.setTextColor, color)
+            set(label.setBackgroundColor, background)
+            draw()
+        end
     end
 
     return label
