@@ -150,8 +150,6 @@ function create(cPath)
             keys[#keys + 1] = key
         end
 
-        table.sort(keys)
-
         return keys
     end
 
@@ -163,8 +161,6 @@ function create(cPath)
         for _, value in pairs(cTable) do
             values[#values + 1] = value
         end
-
-        table.sort(values)
 
         return values
     end
