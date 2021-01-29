@@ -87,7 +87,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
                 error("bad argument #4 (expected width between 0 and " .. maxWidth - (bPosX - 1) .. ", got " .. bWidth .. ")", 2)
             end
         else
-            bWidth = 0
+            bWidth = math.min(maxWidth - (bPosX - 1), 13)
         end
 
         if bHeight ~= nil then
@@ -99,7 +99,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
                 error("bad argument #5 (expected height between 0 and " .. maxHeight - (bPosY - 1) .. ", got " .. bHeight .. ")", 2)
             end
         else
-            bHeight = 0
+            bHeight = math.min(maxWidth - (bPosX - 1), 3)
         end
 
         if bTitle ~= nil then
@@ -166,7 +166,17 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
     end
 
-    local function load(key, method)
+    local function perform()
+        if bAction ~= nil then
+            local success, message = pcall(bAction, bActive)
+
+            if not success then
+                error("bad action #" .. tostring(bActive) .. " (" .. message .. ")", 3)
+            end
+        end
+    end
+
+    local function loadKey(key, method)
         if bConfig ~= nil and bConfig.contains(key) then
             local success, message = pcall(method, bConfig.get(key))
 
@@ -176,7 +186,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
     end
 
-    local function save(key, value)
+    local function saveKey(key, value)
         if bConfig ~= nil and bConfig.get(key) ~= value then
             bConfig.set(key, value)
             bConfig.save()
@@ -210,7 +220,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if title ~= bTitle then
-            bTitle = save("title", title)
+            bTitle = saveKey("title", title)
             draw(math.ceil(bHeight / 2))
 
             return true
@@ -247,7 +257,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
 
         if posX ~= bPosX then
             clear()
-            bPosX = save("pos-x", posX)
+            bPosX = saveKey("pos-x", posX)
             draw()
 
             return true
@@ -278,7 +288,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
 
         if posY ~= bPosY then
             clear()
-            bPosY = save("pos-y", posY)
+            bPosY = saveKey("pos-y", posY)
             draw()
 
             return true
@@ -315,7 +325,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
 
         if width ~= bWidth then
             clear()
-            bWidth = save("width", width)
+            bWidth = saveKey("width", width)
             draw()
 
             return true
@@ -346,7 +356,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
 
         if height ~= bHeight then
             clear()
-            bHeight = save("height", height)
+            bHeight = saveKey("height", height)
             draw()
 
             return true
@@ -378,7 +388,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= caText then
-            caText = save("color.text-active", hex[color])
+            caText = saveKey("color.text-active", hex[color])
             draw()
 
             return true
@@ -410,7 +420,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= caBackground then
-            caBackground = save("color.background-active", hex[color])
+            caBackground = saveKey("color.background-active", hex[color])
             draw()
 
             return true
@@ -442,7 +452,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= ciText then
-            ciText = save("color.text-inactive", hex[color])
+            ciText = saveKey("color.text-inactive", hex[color])
             draw()
 
             return true
@@ -474,8 +484,42 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if hex[color] ~= ciBackground then
-            ciBackground = save("color.background-inactive", hex[color])
+            ciBackground = saveKey("color.background-inactive", hex[color])
             draw()
+
+            return true
+        end
+
+        return false
+    end
+
+    --- Gets the action of this button.
+    --- @return function the action function.
+    function button.getAction()
+        return bAction
+    end
+
+    --- Sets the action of this button.
+    --- @param action function|string the new action.
+    --- @return function true when the action was changed, false otherwise.
+    function button.setAction(action)
+        if type(action) ~= "function" and type(action) ~= "string" then
+            error("bad argument #1 (expected function or string, got " .. type(action) .. ")", 2)
+        end
+
+        if type(action) == "string" then
+            local func, message = load(action, "action", "t")
+
+            if not func then
+                error("bad argument #1 (" .. message .. ")", 2)
+            end
+
+            action = func
+        end
+
+        if action ~= bAction then
+            bAction = action
+            perform()
 
             return true
         end
@@ -498,7 +542,8 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if active ~= bActive then
-            bActive = save("active", active)
+            bActive = saveKey("active", active)
+            perform()
             draw()
 
             return true
@@ -522,7 +567,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if visible ~= bVisible then
-            bVisible = save("visible", visible)
+            bVisible = saveKey("visible", visible)
 
             if visible then
                 draw()
@@ -549,17 +594,18 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         end
 
         if bConfig.load() then
-            load("pos-x", button.setPosX)
-            load("pos-y", button.setPosY)
-            load("width", button.setWidth)
-            load("height", button.setHeight)
-            load("title", button.setTitle)
-            load("color.text-active", button.setActiveTextColor)
-            load("color.text-inactive", button.setInactiveTextColor)
-            load("color.background-active", button.setActiveBackgroundColor)
-            load("color.background-inactive", button.setInactiveBackgroundColor)
-            load("active", button.setActive)
-            load("visible", button.setVisible)
+            loadKey("pos-x", button.setPosX)
+            loadKey("pos-y", button.setPosY)
+            loadKey("width", button.setWidth)
+            loadKey("height", button.setHeight)
+            loadKey("title", button.setTitle)
+            loadKey("color.text-active", button.setActiveTextColor)
+            loadKey("color.text-inactive", button.setInactiveTextColor)
+            loadKey("color.background-active", button.setActiveBackgroundColor)
+            loadKey("color.background-inactive", button.setInactiveBackgroundColor)
+            loadKey("action", button.setAction)
+            loadKey("active", button.setActive)
+            loadKey("visible", button.setVisible)
 
             return true
         end
@@ -578,17 +624,17 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
         if path ~= nil and (bConfig == nil or bConfig.path() ~= path) then
             bConfig = config.create(path)
 
-            save("title", bTitle)
-            save("pos-x", bPosX)
-            save("pos-y", bPosY)
-            save("width", bWidth)
-            save("height", bHeight)
-            save("color.text-active", caText)
-            save("color.text-inactive", ciText)
-            save("color.background-active", caBackground)
-            save("color.background-inactive", ciBackground)
-            save("active", bActive)
-            save("visible", bVisible)
+            saveKey("title", bTitle)
+            saveKey("pos-x", bPosX)
+            saveKey("pos-y", bPosY)
+            saveKey("width", bWidth)
+            saveKey("height", bHeight)
+            saveKey("color.text-active", caText)
+            saveKey("color.text-inactive", ciText)
+            saveKey("color.background-active", caBackground)
+            saveKey("color.background-inactive", ciBackground)
+            saveKey("active", bActive)
+            saveKey("visible", bVisible)
         end
 
         return bConfig.save()
@@ -624,11 +670,7 @@ function create(bTerm, bPosX, bPosY, bWidth, bHeight, bTitle)
 
     --- Performs the actions of this button.
     function button.press()
-        if bActive then
-            button.setActive(false)
-        else
-            button.setActive(true)
-        end
+        button.setActive(not bActive)
     end
 
     return button
