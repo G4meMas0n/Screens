@@ -1,0 +1,3 @@
+Functions in the json API:
+json.decode( string )
+json.encode( object )

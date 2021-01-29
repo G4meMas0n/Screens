@@ -1,0 +1,13 @@
+Functions in the config API:
+config.create( path )
+
+Functions of Configs created with the config API:
+clear()
+contains( key )
+get( key, default )
+set( key, value )
+keys()
+values()
+path()
+load()
+save()
