@@ -47,18 +47,27 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
         error("bad argument #1 (expected table, got " .. type(tTerm) .. ")", 2)
     end
 
-    local tPadding, tOffset = 1, 2
+    local tOffset, tPadding = 2, 1
 
     do
         local maxWidth, maxHeight = tTerm.getSize()
+
+        if maxWidth < tOffset * 2 then
+            error("bad argument #1 (expected width greater than or equal " .. tOffset * 2 .. ", got " .. maxWidth .. ")", 2)
+        end
+
+        -- Magic value '2': Corresponds to one title line and one additional content line
+        if maxHeight < (tOffset * 2) + tPadding + 2 then
+            error("bad argument #1 (expected height greater than or equal " .. (tOffset * 2) + tPadding + 2 .. ", got " .. maxHeight .. ")", 2)
+        end
 
         if tPosX ~= nil then
             if type(tPosX) ~= "number" then
                 error("bad argument #2 (expected number, got " .. type(tPosX) .. ")", 2)
             end
 
-            if tPosX < 1 or tPosX > maxWidth - (tPadding * 2) then
-                error("bad argument #2 (expected position between 1 and " .. maxWidth - (tPadding * 2) .. ", got " .. tPosX .. ")", 2)
+            if tPosX < 1 or tPosX > maxWidth - (tOffset * 2) + 1 then
+                error("bad argument #2 (expected position between 1 and " .. maxWidth - (tOffset * 2) + 1 .. ", got " .. tPosX .. ")", 2)
             end
         else
             tPosX = 1
@@ -69,8 +78,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
                 error("bad argument #3 (expected number, got " .. type(tPosY) .. ")", 2)
             end
 
-            if tPosY < 1 or tPosY > maxHeight - (tPadding * 2) then
-                error("bad argument #3 (expected position between 1 and " .. maxHeight - (tPadding * 2) .. ", got " .. tPosY .. ")", 2)
+            if tPosY < 1 or tPosY > maxHeight - (tOffset * 2) - tPadding - 1 then
+                error("bad argument #3 (expected position between 1 and " .. maxHeight - (tOffset * 2) - tPadding - 1 .. ", got " .. tPosY .. ")", 2)
             end
         else
             tPosY = 1
@@ -81,8 +90,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
                 error("bad argument #4 (expected number, got " .. type(tWidth) .. ")", 2)
             end
 
-            if tWidth < (tPadding * 2) + 1 or tWidth > maxWidth - (tPosX - 1) then
-                error("bad argument #4 (expected width between " .. (tPadding * 2) + 1 .. " and " .. maxWidth - (tPosX - 1) .. ", got " .. tWidth .. ")", 2)
+            if tWidth < tOffset * 2 or tWidth > maxWidth - (tPosX - 1) then
+                error("bad argument #4 (expected width between " .. tOffset * 2 .. " and " .. maxWidth - (tPosX - 1) .. ", got " .. tWidth .. ")", 2)
             end
         else
             tWidth = maxWidth - (tPosX - 1)
@@ -93,11 +102,12 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
                 error("bad argument #5 (expected number, got " .. type(tHeight) .. ")", 2)
             end
 
-            if tHeight < (tPadding * 2) + 1 or tHeight > maxHeight - (tPosY - 1) then
-                error("bad argument #5 (expected height between " .. (tPadding * 2) + 1 .. " and " .. maxHeight - (tPosY - 1) .. ", got " .. tHeight .. ")", 2)
+            -- Magic value '2': Corresponds to one title line and one additional content line
+            if tHeight < (tOffset * 2) + tPadding + 2 or tHeight > maxHeight - (tPosY - 1) then
+                error("bad argument #5 (expected height between " .. (tOffset * 2) + tPadding + 2 .. " and " .. maxHeight - (tPosY - 1) .. ", got " .. tHeight .. ")", 2)
             end
         else
-            tHeight = maxWidth - (tPosY - 1)
+            tHeight = maxHeight - (tPosY - 1)
         end
 
         if tTitle ~= nil then
@@ -105,15 +115,15 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
                 error("bad argument #6 (expected string, got " .. type(tTitle) .. ")", 2)
             end
 
-            if tTitle:len() > 0 and tTitle:len() > tWidth - (tOffset * 2) - (tPadding * 2) then
-                error("bad argument #6 (expected title length between 0 and " .. tWidth - (tOffset * 2) - (tPadding * 2) .. ", got " .. tTitle:len() .. ")", 2)
+            if tTitle:len() > tWidth - (tOffset * 2) then
+                error("bad argument #6 (expected length between 0 and " .. tWidth - (tOffset * 2) .. ", got " .. tTitle:len() .. ")", 2)
             end
         else
             tTitle = ""
         end
     end
 
-    local cText, cBackground = hex[bTerm.getTextColor()], hex[bTerm.getBackgroundColor()]
+    local cText, cBackground = hex[tTerm.getTextColor()], hex[tTerm.getBackgroundColor()]
     local tCursorX, tCursorY = 1, 1
     local tVisible = false
     local tHeader = {}
@@ -121,28 +131,25 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     local tConfig
 
     local function generate()
-        local width = tWidth - (tPadding * 2)
-
-        if tHeader["full"] == nil or tHeader["full"]:len() ~= width then
-            tHeader["full"] = string.rep("=", width)
+        if tHeader["full"] == nil or tHeader["full"]:len() ~= tWidth then
+            tHeader["full"] = string.rep("=", tWidth)
         end
 
-        if tHeader["empty"] == nil or tHeader["empty"]:len() ~= width then
-            tHeader["empty"] = "=" .. string.rep(" ", width - 2) .. "="
+        if tHeader["empty"] == nil or tHeader["empty"]:len() ~= tWidth then
+            tHeader["empty"] = "=" .. string.rep(" ", tWidth - 2) .. "="
         end
 
-        if tHeader["color"] == nil or tHeader["color"]:len() ~= width then
-            tHeader["color"] = cText:rep(width)
+        tHeader["color"] = cText:rep(tWidth)
+        tHeader["background"] = cBackground:rep(tWidth)
+
+        if tTitle:len() > 0 then
+            local before = math.ceil((tWidth - tTitle:len()) / 2)
+            local after = before + tTitle:len() + 1
+
+            tHeader["title"] = tHeader["empty"]:sub(1, before) .. tTitle .. tHeader["empty"]:sub(after)
+        else
+            tHeader["title"] = tHeader["empty"]
         end
-
-        if tHeader["background"] == nil or tHeader["background"]:len() ~= width then
-            tHeader["background"] = cBackground:rep(width)
-        end
-
-        local before = math.ceil((width - tTitle:len()) / 2)
-        local after = before + tTitle:len() + 1
-
-        tHeader["title"] = tHeader["empty"]:sub(1, before) .. tTitle .. tHeader["empty"]:sub(after)
     end
 
     local function clear(line)
@@ -167,7 +174,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             if line ~= nil then
                 local oldX, oldY = tTerm.getCursorPos()
 
-                tTerm.setCursorPos(tPosX + tPadding, tPosY + tPadding + (line - 1))
+                tTerm.setCursorPos(tPosX, tPosY + (line - 1))
 
                 if tTitle:len() > 0 then
                     if line <= (tOffset * 2) + 1 then
@@ -176,26 +183,29 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
                         end
 
                         if line == 1 or line == (tOffset * 2) + 1 then
-                            tTerm.blit(tHeader["full"].text, tHeader["full"].color, tHeader["full"].background)
+                            tTerm.blit(tHeader["full"], tHeader["color"], tHeader["background"])
                         elseif line == tOffset + 1 then
-                            tTerm.blit(tHeader["title"].text, tHeader["title"].color, tHeader["title"].background)
+                            tTerm.blit(tHeader["title"], tHeader["color"], tHeader["background"])
                         else
-                            tTerm.blit(tHeader["empty"].text, tHeader["empty"].color, tHeader["empty"].background)
+                            tTerm.blit(tHeader["empty"], tHeader["color"], tHeader["background"])
                         end
 
+                        tTerm.setCursorPos(oldX, oldY)
                         return
                     end
 
-                    line = line - (tOffset * 2) - 1
+                    line = line - (tOffset * 2) - tPadding - 1
                 end
 
                 if tLines[line] ~= nil then
                     tTerm.blit(tLines[line].text, tLines[line].color, tLines[line].background)
+                else
+                    tTerm.blit(string.rep(" ", tWidth), cText:rep(tWidth), cBackground:rep(tWidth))
                 end
 
                 tTerm.setCursorPos(oldX, oldY)
             else
-                for lines = 1, tHeight - (tPadding * 2) do
+                for lines = 1, tHeight do
                     draw(lines)
                 end
             end
@@ -203,8 +213,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     end
 
     local function empty(line)
-        local width = tWidth - (tPadding * 2)
-        local text, color, background = string.rep(" ", width), cText:rep(width), cBackground:rep(width)
+        local text, color, background = string.rep(" ", tWidth), cText:rep(tWidth), cBackground:rep(tWidth)
 
         if line == nil then
             for _, content in pairs(tLines) do
@@ -224,10 +233,10 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     local function blit(text, color, background)
         local start = tCursorX
         local stop = start + text:len() - 1
-        local width, height = tWidth - (tPadding * 2), tHeight - (tPadding * 2)
+        local width, height = tWidth, tHeight
 
         if tTitle:len() > 0 then
-            height = height - (tOffset * 2) - 1
+            height = height - (tOffset * 2) - tPadding - 1
         end
 
         if tCursorY >= 1 and tCursorY <= height then
@@ -275,12 +284,10 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
                     ["background"] = background
                 }
 
-                if tVisible then
-                    if tTitle:len() > 0 then
-                        draw(tCursorY + (tOffset * 2) + 1)
-                    else
-                        draw(tCursorY)
-                    end
+                if tTitle:len() > 0 then
+                    draw(tCursorY + (tOffset * 2) + tPadding + 1)
+                else
+                    draw(tCursorY)
                 end
             end
         end
@@ -293,16 +300,16 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             end
 
             if background ~= nil then
-                content.color = content.color:gsub(cBackground, hex[background])
+                content.background = content.background:gsub(cBackground, hex[background])
             end
         end
     end
 
     local function resize()
-        local width, height = tWidth - (tPadding * 2), tHeight - (tPadding * 2)
+        local width, height = tWidth, tHeight
 
         if tTitle:len() > 0 then
-            height = height - (tOffset * 2) - 1
+            height = height - (tOffset * 2) - tPadding - 1
         end
 
         local lines = {}
@@ -356,7 +363,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     local terminal = {}
 
     --- Gets the title of this terminal.
-    --- @return string the name of this terminal or an empty string.
+    --- @return string the title of this terminal or an empty string.
     function terminal.getTitle()
         return tTitle
     end
@@ -369,8 +376,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             error("bad argument #1 (expected string, got " .. type(title) .. ")", 2)
         end
 
-        if title:len() > 0 and title:len() > tWidth - (tPadding * 2) - (tOffset * 2) then
-            error("bad argument #1 (expected length between 0 and " .. tWidth - (tPadding * 2) - (tOffset * 2) .. ", got " .. title:len() .. ")", 2)
+        if title:len() > tWidth - (tOffset * 2) then
+            error("bad argument #1 (expected length between 0 and " .. tWidth - (tOffset * 2) .. ", got " .. title:len() .. ")", 2)
         end
 
         if title ~= tTitle then
@@ -399,8 +406,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             error("bad argument #1 (expected number, got " .. type(offset) .. ")", 2)
         end
 
-        if offset < 1 or offset * 2 > tHeight - (tPadding * 2) - 1 then
-            error("bad argument #1 (expected offset between 1 and " .. math.floor((tHeight - (tPadding * 2) - 1) / 2) .. ", got " .. offset .. ")", 2)
+        if offset < 2 or offset * 2 > math.min(tHeight - 1, tWidth - tTitle:len()) then
+            error("bad argument #1 (expected offset between 1 and " .. math.floor(math.min(tHeight - 1, tWidth - tTitle:len()) / 2) .. ", got " .. offset .. ")", 2)
         end
 
         if offset ~= tOffset then
@@ -419,9 +426,9 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     --- @return number, number the terminal's x and y position without header.
     function terminal.getPosition()
         if tTitle:len() > 0 then
-            return tPosX + tPadding, tPosY + tPadding + (tOffset * 2) + 1
+            return tPosX, tPosY + (tOffset * 2) + tPadding + 1
         else
-            return tPosX + tPadding, tPosY + tPadding
+            return tPosX, tPosY
         end
     end
 
@@ -441,8 +448,12 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
 
         local maxWidth, _ = tTerm.getSize()
 
-        if posX < 1 or posX > maxWidth - (tPadding * 2) then
-            error("bad argument #1 (expected position between 1 and " .. maxWidth - (tPadding * 2) .. ", got " .. posX .. ")", 2)
+        if maxWidth < tOffset * 2 then
+            error("bad argument #1 (expected width greater than or equal " .. tOffset * 2 .. ", got " .. maxWidth .. ")", 2)
+        end
+
+        if posX < 1 or posX > maxWidth - (tOffset * 2) + 1 then
+            error("bad argument #2 (expected position between 1 and " .. maxWidth - (tOffset * 2) + 1 .. ", got " .. posX .. ")", 2)
         end
 
         if posX ~= tPosX then
@@ -472,8 +483,13 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
 
         local _, maxHeight = tTerm.getSize()
 
-        if posY < 1 or posY > maxHeight - (tPadding * 2) then
-            error("bad argument #3 (expected position between 1 and " .. maxHeight - (tPadding * 2) .. ", got " .. posY .. ")", 2)
+        -- Magic value '2': Corresponds to one title line and one additional content line
+        if maxHeight < (tOffset * 2) + tPadding + 2 then
+            error("bad argument #1 (expected height greater than or equal " .. (tOffset * 2) + tPadding + 2 .. ", got " .. maxHeight .. ")", 2)
+        end
+
+        if posY < 1 or posY > maxHeight - (tOffset * 2) - tPadding - 1 then
+            error("bad argument #3 (expected position between 1 and " .. maxHeight - (tOffset * 2) - tPadding - 1 .. ", got " .. posY .. ")", 2)
         end
 
         if posY ~= tPosY then
@@ -491,9 +507,9 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     --- @return number, number the terminal's width and height without header.
     function terminal.getSize()
         if tTitle:len() > 0 then
-            return tWidth - (tPadding * 2), tHeight - (tPadding * 2) - (tOffset * 2) - 1
+            return tWidth, tHeight - (tOffset * 2) - tPadding - 1
         else
-            return tWidth - (tPadding * 2), tHeight - (tPadding * 2)
+            return tWidth, tHeight
         end
     end
 
@@ -513,8 +529,12 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
 
         local maxWidth, _ = tTerm.getSize()
 
-        if width < (tPadding * 2) + 1 or width > maxWidth - (tPosX - 1) then
-            error("bad argument #1 (expected width between " .. (tPadding * 2) + 1 .. " and " .. maxWidth - (tPosX - 1) .. ", got " .. width .. ")", 2)
+        if maxWidth < tOffset * 2 then
+            error("bad argument #1 (expected width greater than or equal " .. tOffset * 2 .. ", got " .. maxWidth .. ")", 2)
+        end
+
+        if width < tOffset * 2 or width > maxWidth - (tPosX - 1) then
+            error("bad argument #4 (expected width between " .. tOffset * 2 .. " and " .. maxWidth - (tPosX - 1) .. ", got " .. width .. ")", 2)
         end
 
         if width ~= tWidth then
@@ -546,12 +566,14 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
 
         local _, maxHeight = tTerm.getSize()
 
-        if height < (tPadding * 2) + 1 or height > maxHeight - (tPosY - 1) then
-            error("bad argument #1 (expected height between " .. (tPadding * 2) + 1 .. " and " .. maxHeight - (tPosY - 1) .. ", got " .. height .. ")", 2)
+        -- Magic value '2': Corresponds to one title line and one additional content line
+        if maxHeight < (tOffset * 2) + tPadding + 2 then
+            error("bad argument #1 (expected height greater than or equal " .. (tOffset * 2) + tPadding + 2 .. ", got " .. maxHeight .. ")", 2)
         end
 
-        if tTitle:len() > 0 and height < (tPadding * 2) + (tOffset * 2) + tTitle:len() then
-            error("bad argument #1 (expected height between " .. (tPadding * 2) + (tOffset * 2) + 1 .. " and " .. maxHeight - (tPosY - 1) .. ", got " .. height .. ")", 2)
+        -- Magic value '2': Corresponds to one title line and one additional content line
+        if height < (tOffset * 2) + tPadding + 2 or height > maxHeight - (tPosY - 1) then
+            error("bad argument #5 (expected height between " .. (tOffset * 2) + tPadding + 2 .. " and " .. maxHeight - (tPosY - 1) .. ", got " .. height .. ")", 2)
         end
 
         if height ~= tHeight then
@@ -581,8 +603,9 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             error("bad argument #1 (expected number, got " .. type(padding) .. ")", 2)
         end
 
-        if padding < 0 or padding * 2 > tWidth then
-            error("bad argument #1 (expected padding between 0 and " .. math.floor(tWidth / 2) .. ", got " .. padding .. ")", 2)
+        -- Magic value '2': Corresponds to one title line and one additional content line
+        if padding < 0 or padding > tWidth - (tOffset * 2) - 2 then
+            error("bad argument #1 (expected padding between 0 and " .. tWidth - (tOffset * 2) - 2 .. ", got " .. padding .. ")", 2)
         end
 
         if padding ~= tPadding then
@@ -702,8 +725,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     end
 
     --- Sets the cursor position of this terminal.
-    --- @param posX number the new x position.
-    --- @param posY number the new y position.
+    --- @param posX number|nil the new x position or nil.
+    --- @param posY number|nil the new y position or nil.
     function terminal.setCursorPos(posX, posY)
         if posX ~= nil then
             if type(posX) ~= "number" then
@@ -739,8 +762,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             load("pos-y", terminal.setPosY)
             load("width", terminal.setWidth)
             load("height", terminal.setHeight)
-            load("padding", terminal.setPadding)
             load("offset", terminal.setOffset)
+            load("padding", terminal.setPadding)
             load("title", terminal.setTitle)
             load("color.text", terminal.setTextColor)
             load("color.background", terminal.setBackgroundColor)
@@ -769,8 +792,8 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             save("pos-y", tPosY)
             save("width", tWidth)
             save("height", tHeight)
-            save("padding", tPadding)
             save("offset", tOffset)
+            save("padding", tPadding)
             save("color.text", cText)
             save("color.background", cBackground)
             save("visible", tVisible)
@@ -782,7 +805,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
     end
 
     --- Gets whether this terminal is colored.
-    --- @return boolean always true.
+    --- @return boolean true when the parent terminal supports colors, false otherwise.
     function terminal.isColor()
         return tTerm.isColor()
     end
@@ -809,11 +832,10 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
             tLines[line] = nil
 
             if tTitle:len() > 0 then
-                line = line + (tOffset * 2) + 1
+                line = line + (tOffset * 2) + tPadding + 1
             end
 
             clear(line)
-            draw(line)
         end
     end
 
@@ -836,7 +858,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
 
         if tLines[line] ~= nil then
             if tTitle:len() > 0 then
-                line = line + (tOffset * 2) + 1
+                line = line + (tOffset * 2) + tPadding + 1
             end
 
             clear(line)
@@ -868,7 +890,7 @@ function create(tTerm, tPosX, tPosY, tWidth, tHeight, tTitle)
         blit(text, color, background)
     end
 
-    --- Append text to this window using the terminals text and background color.
+    --- Append text to this terminal using the terminals text and background color.
     --- @param text string the text to write.
     function terminal.write(text)
         if type(text) ~= "string" then
