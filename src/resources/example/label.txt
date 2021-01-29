@@ -1,0 +1,29 @@
+{
+    ["text"] = "",
+    ["pos-x"] = 1,
+    ["pos-y"] = 1,
+    ["width"] = 7,
+    ["color"] = {
+        ["text"] = "0",
+        ["background"] = "f"
+    },
+    ["align"] = "right",
+    ["action"] = [[
+        local tArgs = { ... }
+
+        if #tArgs == 1 then
+            local width = tonumber(tArgs[1])
+
+            if width < string.len("Active") or width < string.len("Inactive") then
+                error("expected width equal or greater than 7, got " .. width .. ")", 2)
+            end
+        end
+
+        if redstone.getInput("back") then
+            return "Active", colors.green, colors.black
+        else
+            return "Inactive", colors.red, colors.black
+        end
+    ]],
+    ["visible"] = true
+}

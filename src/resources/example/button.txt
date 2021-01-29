@@ -1,0 +1,24 @@
+{
+    ["title"] = "Click",
+    ["pos-x"] = 1,
+    ["pos-y"] = 1,
+    ["width"] = 7,
+    ["height"] = 3,
+    ["color"] = {
+        ["text-active"] = "0",
+        ["text-inactive"] = "0",
+        ["background-active"] = "d",
+        ["background-inactive"] = "e"
+    },
+    ["action"] = [[
+        local tArgs = { ... }
+
+        if #tArgs[1] == 1 then
+            term.setCursorPos(1, 19)
+            term.clearLine()
+            term.write(tostring(tArgs[1]))
+        end
+    ]],
+    ["active"] = false,
+    ["visible"] = true
+}

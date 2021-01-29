@@ -1,12 +1,16 @@
 {
-    ["title"] = "",
+    ["title"] = "Terminal",
+    ["pos-x"] = 2,
+    ["pos-y"] = 2,
+    ["width"] = 49,
+    ["height"] = 17,
     ["offset"] = 2,
     ["padding"] = 1,
     ["color"] = {
         ["text"] = "0",
         ["background"] = "f"
     },
-    ["visible"] = false,
+    ["visible"] = true,
     ["cursor-x"] = 1,
     ["cursor-y"] = 1
 }
